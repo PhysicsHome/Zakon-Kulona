@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Электростатика алаңы — Кулон заңы және өріс зонды</title>
+<style>
+  :root { --bg:#ffffff; --fg:#111111; --accent:#0066ff; --muted:#888; --red:#e11; --blue:#06c; --green:#0a0; }
+  html, body { background: var(--bg); color: var(--fg); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+  .wrap { max-width: 960px; margin: 16px auto; padding: 8px 16px; }
+  h1 { font-size: 1.3rem; margin: 0 0 8px; }
+  h2 { font-size: 1.05rem; margin: 16px 0 8px; }
+  p, label, input, button { font-size: 1rem; }
+  .grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  .controls { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 12px; align-items: end; }
+  .card { border: 1px solid #ddd; border-radius: 12px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  .small { color: var(--muted); font-size: .95rem; }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .row label { min-width: 140px; }
+  input[type="number"] { width: 120px; padding:6px 8px; border:1px solid #ccc; border-radius:8px; }
+  button { padding: 8px 12px; border-radius: 10px; border: 1px solid #ccc; background: #f7f7f7; cursor: pointer; }
+  button.primary { background: var(--accent); color: white; border-color: var(--accent); }
+  canvas { width: 100%; height: auto; border-radius: 12px; border: 1px solid #ddd; touch-action: none; background: #fafafa; }
+  .pill { display:inline-block; padding:4px 8px; border-radius:999px; background:#f0f6ff; color:#034; border:1px solid #cfe1ff; font-size:.9rem; }
+  .legend span { display:inline-flex; align-items:center; gap:6px; margin-right:12px; }
+  .dot { display:inline-block; width:12px; height:12px; border-radius:50%; }
+  .dot.red { background:#ff375f; box-shadow: 0 0 0 2px rgba(255,55,95,0.15); }
+  .dot.blue{ background:#1d4ed8; box-shadow: 0 0 0 2px rgba(29,78,216,0.15); }
+  .dot.green{ background:#22c55e; box-shadow: 0 0 0 2px rgba(34,197,94,0.15); }
+  .note { background:#fff8d6; border:1px solid #f1e5ab; padding:8px 10px; border-radius:10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Электростатика алаңы — Кулон заңы және өріс зонды</h1>
+  <p class="small">Қызыл (+) және көк (−/+) зарядтарды сүйреп жылжытыңыз. Кенепке түртсеңіз — жасыл сынақ заряды сол жерге ауысады. Төмендегі мәндерді реттеңіз. Барлығы SI, сыныпқа ыңғайлы бірліктермен.</p>
+
+  <div class="card">
+    <canvas id="sim" width="900" height="480" aria-label="Электростатика кенебі"></canvas>
+    <div class="row legend small" style="margin-top:8px;">
+      <span><i class="dot red"></i>Заряд 1 (q<sub>1</sub>)</span>
+      <span><i class="dot blue"></i>Заряд 2 (q<sub>2</sub>)</span>
+      <span><i class="dot green"></i>Сынақ заряд (өріс бағыты)</span>
+      <span class="pill">F = k |q₁ q₂| / r²</span>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Параметрлер</h2>
+      <div class="controls">
+        <div class="row">
+          <label for="q1">q₁ (микрокулон μC):</label>
+          <input id="q1" type="number" step="0.1" value="5" />
+        </div>
+        <div class="row">
+          <label for="q2">q₂ (микрокулон μC):</label>
+          <input id="q2" type="number" step="0.1" value="-3" />
+        </div>
+        <div class="row">
+          <label for="k">Кулон тұрақтысы k (N·m²/C²):</label>
+          <input id="k" type="number" step="0.000000001" value="8987551792" />
+        </div>
+        <div class="row">
+          <label for="showVectors">Векторларды көрсету:</label>
+          <input id="showVectors" type="checkbox" checked />
+        </div>
+        <div class="row">
+          <button id="randomize">Кездейсоқ</button>
+          <button id="reset">Қалпына келтіру</button>
+          <button id="freeze" title="Талқылау үшін көріністі тоқтату">Тоқтату</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Есептеулер (онлайн)</h2>
+      <p class="small">Сіз сүйрегенде немесе мәндерді өзгерткенде — бәрі бірден жаңарады.</p>
+      <div id="readout" class="note">—</div>
+    </div>
+
+    <div class="card">
+      <h2>Сыныпта қалай қолдану (1–2 мин)</h2>
+      <ol class="small">
+        <li>Сұрақ: «Тартылады ма, әлде тебіледі ме? q₂-ге күш қай бағытта?» Топтар A/R карточкаларын көтерсін.</li>
+        <li>Оқушылар шаманың тәртібін болжайды (N әлде mN?). Сосын есептелген мәнді көрсетіңіз.</li>
+        <li>Жасыл зондты зарядтардың арасына/жоғарысына қойып, сол нүктедегі <em>өріс векторын</em> талқылаңыз.</li>
+      </ol>
+    </div>
+  </div>
+
+  <p class="small">Кеңес: <strong>Қалпына келтіру</strong> симметриялы бастапқы күйге қайтарады. <strong>Тоқтату</strong> — үстіңгі қабатты уақытша тоқтатып, түсіндіруге ыңғайлы.</p>
+</div>
+
+<script>
+(function(){
+  const canvas = document.getElementById('sim');
+  const ctx = canvas.getContext('2d');
+  const q1Input = document.getElementById('q1');
+  const q2Input = document.getElementById('q2');
+  const kInput  = document.getElementById('k');
+  const showVectors = document.getElementById('showVectors');
+  const readout = document.getElementById('readout');
+  const btnReset = document.getElementById('reset');
+  const btnRand  = document.getElementById('randomize');
+  const btnFreeze= document.getElementById('freeze');
+
+  const DPR = window.devicePixelRatio || 1;
+  // Canvas айқындығын арттыру
+  function scaleCanvas() {
+    const cssW = canvas.clientWidth;
+    const cssH = canvas.clientHeight;
+    canvas.width  = Math.round(cssW * DPR);
+    canvas.height = Math.round(cssH * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  scaleCanvas();
+  window.addEventListener('resize', scaleCanvas);
+
+  // Әлем координаттары = canvas px
+  let state = {
+    q1: { x: 260, y: 240, q_uC: 5, r: 20, dragging: false, color:'#ff375f' },
+    q2: { x: 640, y: 240, q_uC:-3, r: 20, dragging: false, color:'#1d4ed8' },
+    probe: { x: 450, y: 180, r: 8, color:'#22c55e' },
+    k: 8.9875517923e9,
+    frozen: false
+  };
+
+  function reset() {
+    state.q1.x = 260; state.q1.y = 240; state.q1.q_uC = 5;
+    state.q2.x = 640; state.q2.y = 240; state.q2.q_uC = -3;
+    state.probe.x = 450; state.probe.y = 180;
+    state.k = 8.9875517923e9;
+    q1Input.value = state.q1.q_uC;
+    q2Input.value = state.q2.q_uC;
+    kInput.value  = state.k;
+    state.frozen = false;
+    btnFreeze.textContent = "Тоқтату";
+    draw();
+  }
+
+  function randomize() {
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    function rand(min,max){ return Math.random()*(max-min)+min; }
+    state.q1.x = rand(120, W-120); state.q1.y = rand(80, H-80);
+    state.q2.x = rand(120, W-120); state.q2.y = rand(80, H-80);
+    if (dist(state.q1, state.q2) < 120) state.q2.x = Math.min(W-120, state.q1.x+150);
+    state.q1.q_uC = Math.round(rand(-6, 6)*10)/10; if (Math.abs(state.q1.q_uC) < 0.5) state.q1.q_uC = 0.5*Math.sign(state.q1.q_uC||1);
+    state.q2.q_uC = Math.round(rand(-6, 6)*10)/10; if (Math.abs(state.q2.q_uC) < 0.5) state.q2.q_uC = -0.7;
+    q1Input.value = state.q1.q_uC;
+    q2Input.value = state.q2.q_uC;
+    state.probe.x = rand(80, W-80); state.probe.y = rand(60, H-60);
+    state.k = parseFloat(kInput.value)||state.k;
+    draw();
+  }
+
+  function toggleFreeze() {
+    state.frozen = !state.frozen;
+    btnFreeze.textContent = state.frozen ? "Жандандыру" : "Тоқтату";
+  }
+
+  btnReset.addEventListener('click', reset);
+  btnRand.addEventListener('click', randomize);
+  btnFreeze.addEventListener('click', toggleFreeze);
+
+  q1Input.addEventListener('input', ()=>{ state.q1.q_uC = parseFloat(q1Input.value)||0; draw(); });
+  q2Input.addEventListener('input', ()=>{ state.q2.q_uC = parseFloat(q2Input.value)||0; draw(); });
+  kInput .addEventListener('input', ()=>{ state.k = parseFloat(kInput.value)||state.k; draw(); });
+
+  // Көмекші функциялар
+  function dist(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return Math.hypot(dx,dy); }
+  function unit(from,to){ const d = dist(from,to); if (d===0) return {x:0,y:0}; return { x:(to.x-from.x)/d, y:(to.y-from.y)/d }; }
+
+  // Физика: q1-дің q2-ге әсер ететін Кулон күші (вектор)
+  function coulombForce(q1, q2, k) {
+    const r = dist(q1,q2);
+    const dir = unit(q1,q2);
+    const PX_TO_M = 0.005;
+    const r_m = Math.max(0.02, r * PX_TO_M);
+    const q1C = q1.q_uC * 1e-6;
+    const q2C = q2.q_uC * 1e-6;
+    const Fmag = k * Math.abs(q1C*q2C) / (r_m*r_m);
+    const sameSign = Math.sign(q1C) === Math.sign(q2C);
+    const fx = (sameSign ? +1 : -1) * dir.x * Fmag;
+    const fy = (sameSign ? +1 : -1) * dir.y * Fmag;
+    return { fx, fy, Fmag, r_m, sameSign };
+  }
+
+  // Нүктедегі электр өрісі (екі зарядтың қосындысы)
+  function electricFieldAt(p, q1, q2, k) {
+    const PX_TO_M = 0.005;
+    function fieldFrom(q, at){
+      const dx = (at.x - q.x), dy = (at.y - q.y);
+      let r = Math.hypot(dx,dy);
+      const r_m = Math.max(0.01, r * PX_TO_M);
+      const qC = q.q_uC * 1e-6;
+      const Emag = k * Math.abs(qC) / (r_m*r_m);
+      const ux = dx / (r||1), uy = dy / (r||1);
+      const sign = (qC >= 0) ? +1 : -1;
+      return { Ex: sign*ux*Emag, Ey: sign*uy*Emag };
+    }
+    const E1 = fieldFrom(q1, p);
+    const E2 = fieldFrom(q2, p);
+    return { Ex: E1.Ex + E2.Ex, Ey: E1.Ey + E2.Ey };
+  }
+
+  // Сызу көмекшілері
+  function drawArrow(x1,y1,x2,y2,color="#333",lw=2){
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    ctx.save();
+    ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=lw;
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2);
+    // Clip ішінде ұстау (қауіпсіздік үшін)
+    ctx.stroke();
+    const ang = Math.atan2(y2-y1, x2-x1);
+    const ah = 10; const aw = 6;
+    ctx.beginPath();
+    ctx.moveTo(x2,y2);
+    ctx.lineTo(x2 - ah*Math.cos(ang) + aw*Math.sin(ang), y2 - ah*Math.sin(ang) - aw*Math.cos(ang));
+    ctx.lineTo(x2 - ah*Math.cos(ang) - aw*Math.sin(ang), y2 - ah*Math.sin(ang) + aw*Math.cos(ang));
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawCharge(c){
+    ctx.save();
+    ctx.fillStyle = c.color;
+    ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.font = "bold 14px system-ui, sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
+    const sign = (c.q_uC >= 0) ? "+" : "−";
+    ctx.fillText(sign, c.x, c.y);
+    ctx.restore();
+  }
+
+  function drawProbe(p){
+    ctx.save();
+    ctx.fillStyle = "#22c55e";
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = "#128941"; ctx.stroke();
+    ctx.restore();
+  }
+
+  function draw() {
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    ctx.clearRect(0,0,W,H);
+
+    // Жеңіл тор
+    ctx.save();
+    ctx.strokeStyle = "rgba(0,0,0,0.05)"; ctx.lineWidth = 1;
+    for (let x=40; x<W; x+=40){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+    for (let y=40; y<H; y+=40){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+    ctx.restore();
+
+    // Зарядтарды қосатын сызық
+    ctx.save();
+    ctx.strokeStyle = "#bbb"; ctx.lineWidth = 1.5;
+    ctx.setLineDash([6,6]);
+    ctx.beginPath(); ctx.moveTo(state.q1.x, state.q1.y); ctx.lineTo(state.q2.x, state.q2.y); ctx.stroke();
+    ctx.restore();
+
+    // Күштер
+    const fr = coulombForce(state.q1, state.q2, state.k);
+    const f12 = fr; // q1 → q2
+    const f21 = { fx: -f12.fx, fy: -f12.fy, Fmag: f12.Fmag, r_m: f12.r_m, sameSign: f12.sameSign };
+
+    // Көрсету үшін шкалалау
+    const scale = 60 / (f12.Fmag + 1e-9);
+    const ax = f12.fx * scale, ay = f12.fy * scale;
+
+    if (showVectors.checked) {
+      // q2-дегі күш
+      drawArrow(state.q2.x, state.q2.y, state.q2.x + ax, state.q2.y + ay, "#1d4ed8", 3);
+      // q1-дегі күш
+      drawArrow(state.q1.x, state.q1.y, state.q1.x - ax, state.q1.y - ay, "#ff375f", 3);
+    }
+
+    // Зондтағы өріс
+    const E = electricFieldAt(state.probe, state.q1, state.q2, state.k);
+    const Emag = Math.hypot(E.Ex, E.Ey);
+    const Es = 80 / (Emag + 1e-9);
+    if (showVectors.checked) {
+      drawArrow(state.probe.x, state.probe.y, state.probe.x + E.Ex*Es, state.probe.y + E.Ey*Es, "#22c55e", 2.5);
+    }
+
+    // Нысандарды сызу
+    drawCharge(state.q1);
+    drawCharge(state.q2);
+    drawProbe(state.probe);
+
+    // Ақпарат панелі
+    const attractRepel = f12.sameSign ? "тебіледі" : "тартылады";
+    readout.innerHTML = `
+      <b>Қашықтық r:</b> ${(f12.r_m).toFixed(3)} м &nbsp; | &nbsp;
+      <b>q₁:</b> ${state.q1.q_uC.toFixed(2)} μC &nbsp; | &nbsp;
+      <b>q₂:</b> ${state.q2.q_uC.toFixed(2)} μC &nbsp; | &nbsp;
+      <b>Өзара әсері:</b> ${attractRepel}<br/>
+      <b>Күштің модулі |F|:</b> ${(f12.Fmag>=1?f12.Fmag.toFixed(2):f12.Fmag.toExponential(2))} Н &nbsp; | &nbsp;
+      <b>Зондтағы |E|:</b> ${(Emag>=1?Emag.toFixed(2):Emag.toExponential(2))} Н/Кл &nbsp; 
+      <span class="small">(жебе бағытын көрсетеді)</span>
+    `;
+  }
+
+  // Тінтуір/сенсор өзара әрекеттесу
+  let dragTarget = null;
+  function hit(p, x, y){ return Math.hypot(p.x - x, p.y - y) <= p.r + 6; }
+
+  function startDrag(x,y){
+    if (hit(state.q1,x,y)) { dragTarget = state.q1; dragTarget.dragging = true; }
+    else if (hit(state.q2,x,y)) { dragTarget = state.q2; dragTarget.dragging = true; }
+    else { state.probe.x = x; state.probe.y = y; draw(); }
+  }
+  function moveDrag(x,y){
+    if (!dragTarget) return;
+    dragTarget.x = x; dragTarget.y = y;
+    draw();
+  }
+  function endDrag(){
+    if (dragTarget) dragTarget.dragging = false;
+    dragTarget = null;
+  }
+
+  function getXY(e){
+    const rect = canvas.getBoundingClientRect();
+    let cx, cy;
+    if (e.touches && e.touches[0]) {
+      cx = e.touches[0].clientX - rect.left;
+      cy = e.touches[0].clientY - rect.top;
+    } else {
+      cx = e.clientX - rect.left;
+      cy = e.clientY - rect.top;
+    }
+    return { x: cx, y: cy };
+  }
+
+  canvas.addEventListener('mousedown', e=>{ const {x,y}=getXY(e); startDrag(x,y); });
+  window.addEventListener('mousemove', e=>{ const {x,y}=getXY(e); moveDrag(x,y); });
+  window.addEventListener('mouseup', endDrag);
+  canvas.addEventListener('touchstart', e=>{ const {x,y}=getXY(e); startDrag(x,y); e.preventDefault(); }, {passive:false});
+  canvas.addEventListener('touchmove', e=>{ const {x,y}=getXY(e); moveDrag(x,y); e.preventDefault(); }, {passive:false});
+  canvas.addEventListener('touchend', endDrag);
+
+  // Бастапқы сызу
+  reset();
+})();
+</script>
+</body>
+</html>
